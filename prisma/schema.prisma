@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+
+  // Account lockout (H2)
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  clients       Client[]       @relation("AdminClients")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([expiresAt])
+}
+
+// ═══════════════════════════════════════════
+// Client Management
+// ═══════════════════════════════════════════
+
+enum ClientStatus {
+  PENDING        // Ainda não criou demo
+  DEMO_ACTIVE    // Demo online
+  DEMO_EXPIRED   // Demo expirou (7 dias)
+  CONTACTED      // Email enviado
+  CONVERTED      // Cliente aceitou
+  REJECTED       // Cliente recusou
+}
+
+model Client {
+  id            String       @id @default(uuid())
+  name          String       // Nome do estabelecimento
+  ownerName     String?      // Nome do proprietário
+  email         String       // Email de contato
+  phone         String?      // Telefone / WhatsApp
+  website       String       // Site atual do cliente
+  country       String?      // País
+  language      String?      // Idioma
+  notes         String?      // Notas internas
+  status        ClientStatus @default(PENDING)
+
+  // Admin responsável
+  adminId       String?
+  admin         Admin?       @relation("AdminClients", fields: [adminId], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  demoPages     DemoPage[]
+
+  @@index([status])
+  @@index([adminId])
+}
+
+model DemoPage {
+  id            String   @id @default(uuid())
+  slug          String   @unique   // URL slug (ex: "pizzaria-roma")
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  filePath      String             // Caminho no filesystem para os arquivos
+  isActive      Boolean  @default(true)
+  expiresAt     DateTime           // Data de expiração (createdAt + 7 dias)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([slug])
+  @@index([expiresAt])
+  @@index([clientId])
+}

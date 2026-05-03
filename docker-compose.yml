@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: user_db
+    restart: always
+    environment:
+      POSTGRES_USER: mugen_user
+      POSTGRES_PASSWORD: mugen_password
+      POSTGRES_DB: user_db
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+
+volumes:
+  user_db_data:
