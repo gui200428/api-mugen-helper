@@ -14,7 +14,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
       // H4: Enforce SSL in production to encrypt data in transit
-      ssl: isProduction ? { rejectUnauthorized: true } : false,
+      ssl: isProduction ? { rejectUnauthorized: false } : false,
     });
 
     const adapter = new PrismaPg(pool);
