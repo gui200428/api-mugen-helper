@@ -14,15 +14,15 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { DemosService } from './demos.service';
-import { CreateDemoDto } from './dto/create-demo.dto';
+import { PortfolioService } from './portfolio.service';
+import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { AdminGuard } from '../admin-auth/guards/admin.guard';
 
-@Controller('demos')
-export class DemosController {
-  constructor(private readonly demosService: DemosService) { }
+@Controller('portfolio')
+export class PortfolioController {
+  constructor(private readonly portfolioService: PortfolioService) {}
 
-  // Admin: upload a new demo (500MB max to support full framework builds)
+  // Admin: upload a new portfolio page (500MB max)
   @Post()
   @UseGuards(AdminGuard)
   @UseInterceptors(
@@ -31,52 +31,45 @@ export class DemosController {
     }),
   )
   create(
-    @Body() dto: CreateDemoDto,
+    @Body() dto: CreatePortfolioDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.demosService.create(dto, file);
+    return this.portfolioService.create(dto, file);
   }
 
-  // Admin: list all demos
+  // Admin: list all portfolio pages
   @Get()
   @UseGuards(AdminGuard)
   findAll() {
-    return this.demosService.findAll();
+    return this.portfolioService.findAll();
   }
 
-  // Admin: update demo status
+  // Admin: toggle active status
   @Patch(':id/status')
   @UseGuards(AdminGuard)
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('isActive') isActive: boolean,
   ) {
-    return this.demosService.updateStatus(id, isActive);
+    return this.portfolioService.updateStatus(id, isActive);
   }
 
-  // Admin: delete a demo
+  // Admin: delete a portfolio page
   @Delete(':id')
   @UseGuards(AdminGuard)
   remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.demosService.remove(id);
+    return this.portfolioService.remove(id);
   }
 
   /**
-   * Public: serve a demo's index.html with the injected <base> tag.
-   * All other static assets (CSS, JS, images, fonts) are served by the
-   * express.static middleware registered in main.ts before NestJS routes.
-   *
-   * This endpoint also acts as the SPA fallback — any request reaching here
-   * that isn't a real file will return the index.html so client-side routers
-   * (React Router, Vue Router) can take over navigation.
+   * Public: serve a portfolio page's index.html with the injected <base> tag.
+   * Static assets (CSS, JS, images) are handled by express.static in main.ts.
    */
   @Get(['serve/:slug', 'serve/:slug/*'])
   async serve(@Param('slug') slug: string, @Res() res: Response) {
     try {
-      const { html } = await this.demosService.serve(slug);
+      const html = await this.portfolioService.serve(slug);
 
-      // Permissive headers so external scripts (Cloudflare Insights, GA, unpkg, etc.)
-      // load without being blocked by CSP.
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader(
@@ -101,17 +94,6 @@ export class DemosController {
       res.send(html);
     } catch (error) {
       res.removeHeader('X-Frame-Options');
-      // Demo expired/inactive → redirect to client's website or app homepage
-      try {
-        const demo = await this.demosService.findBySlug(slug);
-        if (demo && demo.client && demo.client.website) {
-          let website = demo.client.website.trim();
-          if (!website.startsWith('http')) website = `https://${website}`;
-          const urlObj = new URL(website);
-          return res.redirect(`${urlObj.protocol}//${urlObj.host}`);
-        }
-      } catch (e) { /* demo doesn't exist */ }
-
       const frontendUrl = process.env.CORS_ORIGIN
         ? process.env.CORS_ORIGIN.split(',')[0].trim()
         : 'http://localhost:3001';

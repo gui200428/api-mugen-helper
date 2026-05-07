@@ -15,12 +15,14 @@ import * as fs from 'fs';
 const DEMO_EXPIRY_DAYS = 7;
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'demos');
 
+// Common framework build output directories that should be flattened to root
+const FRAMEWORK_BUILD_DIRS = ['dist', 'build', 'out', '.next', 'public', 'www', 'output'];
+
 @Injectable()
 export class DemosService {
   private readonly logger = new Logger(DemosService.name);
 
   constructor(private readonly prisma: PrismaService) {
-    // Ensure uploads directory exists
     if (!fs.existsSync(UPLOADS_DIR)) {
       fs.mkdirSync(UPLOADS_DIR, { recursive: true });
       this.logger.log(`Created uploads directory: ${UPLOADS_DIR}`);
@@ -28,7 +30,6 @@ export class DemosService {
   }
 
   async create(dto: CreateDemoDto, file: Express.Multer.File) {
-    // Validate client exists
     const client = await this.prisma.client.findUnique({
       where: { id: dto.clientId },
     });
@@ -37,7 +38,6 @@ export class DemosService {
       throw new NotFoundException(`Client with id "${dto.clientId}" not found`);
     }
 
-    // Check slug uniqueness
     const existingDemo = await this.prisma.demoPage.findUnique({
       where: { slug: dto.slug },
     });
@@ -46,7 +46,6 @@ export class DemosService {
       throw new ConflictException(`Demo with slug "${dto.slug}" already exists`);
     }
 
-    // Validate the uploaded file
     if (!file) {
       throw new BadRequestException('A ZIP file is required');
     }
@@ -55,24 +54,11 @@ export class DemosService {
       throw new BadRequestException('Only .zip files are accepted');
     }
 
-    // Extract ZIP to uploads/demos/{slug}/
     const demoDir = path.join(UPLOADS_DIR, dto.slug);
 
     try {
       const zip = new AdmZip(file.buffer);
       const entries = zip.getEntries();
-
-      // Security: validate entries before extraction
-      const hasIndex = entries.some((entry) => {
-        const name = entry.entryName.toLowerCase();
-        return name === 'index.html' || name.endsWith('/index.html');
-      });
-
-      if (!hasIndex) {
-        throw new BadRequestException(
-          'ZIP must contain an index.html file at the root or in a subdirectory',
-        );
-      }
 
       // Security: prevent path traversal
       for (const entry of entries) {
@@ -84,29 +70,31 @@ export class DemosService {
         }
       }
 
+      // Detect if index.html exists anywhere in the ZIP
+      const hasIndex = entries.some((entry) => {
+        const name = entry.entryName.toLowerCase();
+        return name === 'index.html' || name.endsWith('/index.html');
+      });
+
+      if (!hasIndex) {
+        throw new BadRequestException(
+          'ZIP must contain an index.html file. For React/Vite builds, run "npm run build" first and zip the dist/ folder.',
+        );
+      }
+
       // Create directory and extract
       fs.mkdirSync(demoDir, { recursive: true });
       zip.extractAllTo(demoDir, true);
 
-      // If index.html is inside a subdirectory, move everything up
-      const topLevelDirs = fs.readdirSync(demoDir);
-      if (
-        topLevelDirs.length === 1 &&
-        fs.statSync(path.join(demoDir, topLevelDirs[0])).isDirectory()
-      ) {
-        const subDir = path.join(demoDir, topLevelDirs[0]);
-        const subContents = fs.readdirSync(subDir);
-        for (const item of subContents) {
-          fs.renameSync(path.join(subDir, item), path.join(demoDir, item));
-        }
-        fs.rmdirSync(subDir);
-      }
+      // Flatten common framework build output directories to root
+      this.flattenBuildDirectory(demoDir);
 
-      // Verify index.html exists at root after extraction
+      // Verify index.html exists at root after extraction/flattening
       if (!fs.existsSync(path.join(demoDir, 'index.html'))) {
         this.cleanupDemoFiles(demoDir);
         throw new BadRequestException(
-          'After extraction, index.html was not found at the root level',
+          'After extraction, index.html was not found at the root level. ' +
+          'Make sure to zip the contents of your build output (dist/, build/, out/) directly.',
         );
       }
     } catch (error) {
@@ -115,14 +103,12 @@ export class DemosService {
       }
       this.cleanupDemoFiles(demoDir);
       this.logger.error(`Failed to extract ZIP: ${error.message}`);
-      throw new BadRequestException('Failed to extract ZIP file');
+      throw new BadRequestException('Failed to extract ZIP file. The file may be corrupted.');
     }
 
-    // Calculate expiration date
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + DEMO_EXPIRY_DAYS);
 
-    // Create database record
     const demo = await this.prisma.demoPage.create({
       data: {
         slug: dto.slug,
@@ -133,13 +119,56 @@ export class DemosService {
       include: { client: true },
     });
 
-    // Client status is no longer overwritten when a demo is created
-
     this.logger.log(
       `Demo created: ${dto.slug} for client ${client.name} (expires: ${expiresAt.toISOString()})`,
     );
 
     return demo;
+  }
+
+  /**
+   * Flattens framework build output directories to the demo root.
+   * Handles cases like: zip containing a single "dist/" or "build/" folder.
+   */
+  private flattenBuildDirectory(demoDir: string) {
+    const topLevelItems = fs.readdirSync(demoDir);
+
+    // Case 1: Single directory at root that is a known framework build output
+    if (topLevelItems.length === 1) {
+      const singleItem = topLevelItems[0];
+      const singleItemPath = path.join(demoDir, singleItem);
+
+      if (fs.statSync(singleItemPath).isDirectory()) {
+        // Check if it's a known build output dir or contains index.html
+        const isFrameworkDir = FRAMEWORK_BUILD_DIRS.includes(singleItem.toLowerCase());
+        const hasIndexInside = fs.existsSync(path.join(singleItemPath, 'index.html'));
+
+        if (isFrameworkDir || hasIndexInside) {
+          this.logger.log(`Flattening build directory: ${singleItem}/ → root`);
+          const subContents = fs.readdirSync(singleItemPath);
+          for (const item of subContents) {
+            fs.renameSync(path.join(singleItemPath, item), path.join(demoDir, item));
+          }
+          fs.rmdirSync(singleItemPath);
+        }
+      }
+    }
+
+    // Case 2: Root has a single non-build directory but index.html is inside
+    // (e.g. zip was created from a parent folder)
+    if (!fs.existsSync(path.join(demoDir, 'index.html'))) {
+      const items = fs.readdirSync(demoDir);
+      if (items.length === 1) {
+        const singlePath = path.join(demoDir, items[0]);
+        if (fs.statSync(singlePath).isDirectory()) {
+          const subContents = fs.readdirSync(singlePath);
+          for (const item of subContents) {
+            fs.renameSync(path.join(singlePath, item), path.join(demoDir, item));
+          }
+          try { fs.rmdirSync(singlePath); } catch { /* may not be empty */ }
+        }
+      }
+    }
   }
 
   async findAll() {
@@ -173,7 +202,6 @@ export class DemosService {
     }
 
     const data: any = { isActive };
-    // If activating, extend the expiration date to avoid immediate expiration
     if (isActive) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + DEMO_EXPIRY_DAYS);
@@ -188,16 +216,13 @@ export class DemosService {
     return updated;
   }
 
-  async serve(slug: string): Promise<string> {
-    const demo = await this.prisma.demoPage.findUnique({
-      where: { slug },
-    });
+  async serve(slug: string): Promise<{ html: string }> {
+    const demo = await this.prisma.demoPage.findUnique({ where: { slug } });
 
     if (!demo || !demo.isActive) {
       throw new NotFoundException('Demo not found or has expired');
     }
 
-    // Check if expired
     if (demo.expiresAt < new Date()) {
       await this.expireDemo(demo.id);
       throw new NotFoundException('Demo has expired');
@@ -210,66 +235,35 @@ export class DemosService {
     }
 
     let html = fs.readFileSync(indexPath, 'utf-8');
-    
-    // Inject <base> tag right after <head> to fix relative asset loading
+
+    // Inject <base> tag to ensure relative assets resolve correctly
     const baseTag = `<base href="/demos/serve/${slug}/">`;
     if (html.includes('<head>')) {
       html = html.replace('<head>', `<head>\n  ${baseTag}`);
+    } else if (html.includes('<Head>')) {
+      html = html.replace('<Head>', `<Head>\n  ${baseTag}`);
     } else {
-      // Fallback if there's no head tag
       html = `${baseTag}\n${html}`;
     }
 
-    return html;
+    return { html };
   }
 
-  async getAssetPath(slug: string, assetPath: string): Promise<string> {
-    const demo = await this.prisma.demoPage.findUnique({
-      where: { slug },
-    });
-
-    if (!demo || !demo.isActive) {
-      throw new NotFoundException('Demo not found or has expired');
-    }
-
-    if (demo.expiresAt < new Date()) {
-      await this.expireDemo(demo.id);
-      throw new NotFoundException('Demo has expired');
-    }
-
-    // Security: prevent path traversal
-    const fullPath = path.resolve(demo.filePath, assetPath);
-    if (!fullPath.startsWith(path.resolve(demo.filePath))) {
-      throw new BadRequestException('Invalid asset path');
-    }
-
-    if (!fs.existsSync(fullPath)) {
-      throw new NotFoundException(`Asset not found: ${fullPath} (from: ${assetPath})`);
-    }
-
-    return fullPath;
-  }
 
   async remove(id: string) {
-    const demo = await this.prisma.demoPage.findUnique({
-      where: { id },
-    });
+    const demo = await this.prisma.demoPage.findUnique({ where: { id } });
 
     if (!demo) {
       throw new NotFoundException(`Demo with id "${id}" not found`);
     }
 
-    // Delete files from filesystem
     this.cleanupDemoFiles(demo.filePath);
-
-    // Delete database record
     await this.prisma.demoPage.delete({ where: { id } });
 
     this.logger.log(`Demo deleted: ${demo.slug} (${id})`);
     return { message: 'Demo deleted successfully' };
   }
 
-  // Cron: runs every hour to expire old demos
   @Cron(CronExpression.EVERY_HOUR)
   async handleDemoExpiration() {
     const now = new Date();
@@ -282,9 +276,7 @@ export class DemosService {
       include: { client: true },
     });
 
-    if (expiredDemos.length === 0) {
-      return;
-    }
+    if (expiredDemos.length === 0) return;
 
     this.logger.log(`Expiring ${expiredDemos.length} demo(s)...`);
 
@@ -296,23 +288,16 @@ export class DemosService {
   }
 
   private async expireDemo(demoId: string) {
-    const demo = await this.prisma.demoPage.findUnique({
-      where: { id: demoId },
-    });
+    const demo = await this.prisma.demoPage.findUnique({ where: { id: demoId } });
 
     if (!demo) return;
 
-    // Mark as inactive
     await this.prisma.demoPage.update({
       where: { id: demoId },
       data: { isActive: false },
     });
 
-    // Client CRM status is no longer updated when demo expires
-
-    // Clean up files
     this.cleanupDemoFiles(demo.filePath);
-
     this.logger.log(`Demo expired: ${demo.slug}`);
   }
 
