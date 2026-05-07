@@ -9,6 +9,7 @@ import { AdminAuthModule } from './admin-auth/admin-auth.module';
 import { ClientsModule } from './clients/clients.module';
 import { DemosModule } from './demos/demos.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
+import { NotesModule } from './notes/notes.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { PortfolioModule } from './portfolio/portfolio.module';
     ClientsModule,
     DemosModule,
     PortfolioModule,
+    NotesModule,
   ],
   controllers: [AppController],
   providers: [

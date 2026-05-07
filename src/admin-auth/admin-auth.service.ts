@@ -99,7 +99,7 @@ export class AdminAuthService {
     }
 
     // H1: Generate short-lived access token + long-lived refresh token
-    const accessToken = this.generateAccessToken(admin.id, admin.email);
+    const accessToken = this.generateAccessToken(admin.id, admin.email, admin.name);
     const refreshToken = await this.generateRefreshToken(admin.id);
 
     this.logger.log(`Successful login: ${admin.email}`);
@@ -126,7 +126,7 @@ export class AdminAuthService {
 
     if (storedToken.expiresAt < new Date()) {
       // Clean up expired token
-      await this.prisma.refreshToken.delete({
+      await this.prisma.refreshToken.deleteMany({
         where: { id: storedToken.id },
       });
       this.logger.warn(
@@ -136,13 +136,14 @@ export class AdminAuthService {
     }
 
     // Rotate: delete old token and create a new one
-    await this.prisma.refreshToken.delete({
+    await this.prisma.refreshToken.deleteMany({
       where: { id: storedToken.id },
     });
 
     const newAccessToken = this.generateAccessToken(
       storedToken.admin.id,
       storedToken.admin.email,
+      storedToken.admin.name,
     );
     const newRefreshToken = await this.generateRefreshToken(
       storedToken.admin.id,
@@ -188,9 +189,10 @@ export class AdminAuthService {
 
   // --- Private helpers ---
 
-  private generateAccessToken(adminId: string, email: string): string {
+  private generateAccessToken(adminId: string, email: string, name: string): string {
     const payload = {
       email,
+      name,
       sub: adminId,
       role: 'admin',
     };

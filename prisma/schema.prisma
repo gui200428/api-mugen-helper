@@ -21,6 +21,7 @@ model Admin {
 
   refreshTokens RefreshToken[]
   clients       Client[]       @relation("AdminClients")
+  notes         Note[]         @relation("AdminNotes")
 }
 
 model RefreshToken {
@@ -105,4 +106,22 @@ model PortfolioPage {
   updatedAt   DateTime @updatedAt
 
   @@index([slug])
+}
+
+// ═══════════════════════════════════════════
+// Admin Notes (Rascunho)
+// ═══════════════════════════════════════════
+
+model Note {
+  id          String   @id @default(uuid())
+  content     String   // O conteúdo da anotação
+  
+  // Admin que criou a nota
+  adminId     String?
+  admin       Admin?   @relation("AdminNotes", fields: [adminId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([adminId])
 }
