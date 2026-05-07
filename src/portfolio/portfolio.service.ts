@@ -148,7 +148,7 @@ export class PortfolioService {
     return { message: 'Portfolio page deleted successfully' };
   }
 
-  async serve(slug: string): Promise<string> {
+  async serve(slug: string): Promise<{ html: string }> {
     const page = await this.prisma.portfolioPage.findUnique({ where: { slug } });
 
     if (!page || !page.isActive) {
@@ -170,7 +170,7 @@ export class PortfolioService {
       html = `${baseTag}\n${html}`;
     }
 
-    return html;
+    return { html };
   }
 
   private flattenBuildDirectory(dir: string) {

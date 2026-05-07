@@ -238,11 +238,12 @@ export class DemosService {
 
     // Inject <base> tag to ensure relative assets resolve correctly
     const baseTag = `<base href="/demos/serve/${slug}/">`;
-    if (html.includes('<head>')) {
-      html = html.replace('<head>', `<head>\n  ${baseTag}`);
-    } else if (html.includes('<Head>')) {
-      html = html.replace('<Head>', `<Head>\n  ${baseTag}`);
-    } else {
+
+    // Case-insensitive replacement for <head>
+    html = html.replace(/<head(\s[^>]*)?>/i, (match) => `${match}\n  ${baseTag}`);
+
+    // Fallback if no <head> tag exists
+    if (!html.includes(baseTag)) {
       html = `${baseTag}\n${html}`;
     }
 

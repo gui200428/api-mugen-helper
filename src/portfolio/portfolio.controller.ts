@@ -68,7 +68,7 @@ export class PortfolioController {
   @Get(['serve/:slug', 'serve/:slug/*'])
   async serve(@Param('slug') slug: string, @Res() res: Response) {
     try {
-      const html = await this.portfolioService.serve(slug);
+      const { html } = await this.portfolioService.serve(slug);
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
