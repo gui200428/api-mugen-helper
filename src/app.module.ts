@@ -10,6 +10,7 @@ import { ClientsModule } from './clients/clients.module';
 import { DemosModule } from './demos/demos.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { NotesModule } from './notes/notes.module';
+import { FoldersModule } from './folders/folders.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { NotesModule } from './notes/notes.module';
     DemosModule,
     PortfolioModule,
     NotesModule,
+    FoldersModule,
   ],
   controllers: [AppController],
   providers: [

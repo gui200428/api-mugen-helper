@@ -23,8 +23,10 @@ export class NotesService {
     });
   }
 
-  async findAll() {
+  async findAll(folderId?: string) {
+    const where = folderId ? { folderId } : { folderId: null };
     return this.prisma.note.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         admin: {

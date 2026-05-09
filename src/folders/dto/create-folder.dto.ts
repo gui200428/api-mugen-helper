@@ -1,15 +1,11 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-export class CreateNoteDto {
-  @IsString()
-  @IsOptional()
-  title?: string;
-
+export class CreateFolderDto {
   @IsString()
   @IsNotEmpty()
-  content: string;
+  name: string;
 
   @IsString()
   @IsOptional()
-  folderId?: string;
+  parentId?: string;
 }

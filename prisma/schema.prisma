@@ -22,6 +22,7 @@ model Admin {
   refreshTokens RefreshToken[]
   clients       Client[]       @relation("AdminClients")
   notes         Note[]         @relation("AdminNotes")
+  folders       Folder[]       @relation("AdminFolders")
 }
 
 model RefreshToken {
@@ -109,13 +110,41 @@ model PortfolioPage {
 }
 
 // ═══════════════════════════════════════════
+// Folders (Pastas para Anotações)
+// ═══════════════════════════════════════════
+
+model Folder {
+  id          String   @id @default(uuid())
+  name        String
+  
+  parentId    String?
+  parent      Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Folder[] @relation("FolderHierarchy")
+
+  adminId     String?
+  admin       Admin?   @relation("AdminFolders", fields: [adminId], references: [id], onDelete: SetNull)
+
+  notes       Note[]   @relation("FolderNotes")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([adminId])
+}
+
+// ═══════════════════════════════════════════
 // Admin Notes (Rascunho)
 // ═══════════════════════════════════════════
 
 model Note {
   id          String   @id @default(uuid())
-  content     String   // O conteúdo da anotação
+  title       String?
+  content     String
   
+  folderId    String?
+  folder      Folder?  @relation("FolderNotes", fields: [folderId], references: [id], onDelete: Cascade)
+
   // Admin que criou a nota
   adminId     String?
   admin       Admin?   @relation("AdminNotes", fields: [adminId], references: [id], onDelete: SetNull)
@@ -123,5 +152,6 @@ model Note {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([folderId])
   @@index([adminId])
 }

@@ -9,6 +9,7 @@ import {
   UseGuards,
   ParseUUIDPipe,
   Req,
+  Query,
 } from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { CreateNoteDto } from './dto/create-note.dto';
@@ -26,8 +27,8 @@ export class NotesController {
   }
 
   @Get()
-  findAll() {
-    return this.notesService.findAll();
+  findAll(@Query('folderId') folderId?: string) {
+    return this.notesService.findAll(folderId);
   }
 
   @Get(':id')
