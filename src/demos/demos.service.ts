@@ -264,18 +264,93 @@ export class DemosService {
 
     let html = fs.readFileSync(indexPath, 'utf-8');
 
-    // Inject <base> tag to ensure relative assets resolve correctly
+    // ── <base> tag: resolve relative assets correctly via the API proxy path ─
     const baseTag = `<base href="/demos/serve/${slug}/">`;
 
-    // Case-insensitive replacement for <head>
+    /**
+     * Navigation interceptor script.
+     *
+     * The demo is accessed via https://mugentecnologia.com/demo/<slug>
+     * (Vercel rewrites that to https://api.mugentecnologia.com/demos/serve/<slug>).
+     *
+     * Without this script, any absolute link inside the demo that points to the
+     * client's real domain (e.g. https://temnao.com/) would take the user
+     * completely outside mugentecnologia.com.
+     *
+     * This script intercepts every click on <a> tags and, when the destination
+     * is an absolute URL whose origin differs from the page's own origin
+     * (i.e. an external domain), rewrites it so the user stays inside the proxy:
+     *   https://temnao.com/about  →  https://mugentecnologia.com/demo/<slug>/about
+     *   https://temnao.com/       →  https://mugentecnologia.com/demo/<slug>/
+     *
+     * History-based navigation (pushState / replaceState) is also patched so
+     * client-side routers keep working while remaining on the proxy origin.
+     */
+    const publicOrigin =
+      process.env.PUBLIC_ORIGIN ?? 'https://mugentecnologia.com';
+    const interceptorScript = `
+<script data-mugen-proxy="1">
+(function () {
+  var PUBLIC_ORIGIN = ${JSON.stringify(publicOrigin)};
+  var DEMO_BASE     = PUBLIC_ORIGIN + '/demo/${slug}';
+
+  function rewrite(href) {
+    if (!href) return href;
+    try {
+      var url = new URL(href, location.href);
+      // Only rewrite links that leave the current proxy origin
+      if (url.origin !== location.origin) {
+        var tail = url.pathname + url.search + url.hash;
+        // Strip leading slash so we don't end up with double slashes
+        if (tail.startsWith('/')) tail = tail.slice(1);
+        return DEMO_BASE + '/' + tail;
+      }
+    } catch (e) { /* relative or invalid URL — leave as-is */ }
+    return href;
+  }
+
+  // Intercept <a> clicks
+  document.addEventListener('click', function (e) {
+    var target = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (!target) return;
+    var href = target.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('javascript')) return;
+    var rewritten = rewrite(href);
+    if (rewritten !== href) {
+      e.preventDefault();
+      location.href = rewritten;
+    }
+  }, true);
+
+  // Patch history API so SPA client-side navigation also stays in proxy
+  ['pushState', 'replaceState'].forEach(function (method) {
+    var orig = history[method];
+    history[method] = function (state, title, url) {
+      if (url) {
+        try {
+          var u = new URL(url, location.href);
+          if (u.origin !== location.origin) {
+            var tail = u.pathname + u.search + u.hash;
+            if (tail.startsWith('/')) tail = tail.slice(1);
+            url = DEMO_BASE + '/' + tail;
+          }
+        } catch (e) {}
+      }
+      return orig.call(this, state, title, url);
+    };
+  });
+})();
+</script>`;
+
+    // Case-insensitive injection into <head>
     html = html.replace(
       /<head(\s[^>]*)?>/i,
-      (match) => `${match}\n  ${baseTag}`,
+      (match) => `${match}\n  ${baseTag}\n  ${interceptorScript}`,
     );
 
     // Fallback if no <head> tag exists
     if (!html.includes(baseTag)) {
-      html = `${baseTag}\n${html}`;
+      html = `${baseTag}\n${interceptorScript}\n${html}`;
     }
 
     return { html };
