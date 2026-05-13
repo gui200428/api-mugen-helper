@@ -78,12 +78,12 @@ export class PortfolioController {
           "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:",
           "script-src * 'unsafe-inline' 'unsafe-eval' data: blob:",
           "style-src * 'unsafe-inline'",
-          "img-src * data: blob:",
-          "font-src * data:",
-          "connect-src *",
-          "frame-src *",
-          "worker-src * blob:",
-          "manifest-src *",
+          'img-src * data: blob:',
+          'font-src * data:',
+          'connect-src *',
+          'frame-src *',
+          'worker-src * blob:',
+          'manifest-src *',
         ].join('; '),
       );
       res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');

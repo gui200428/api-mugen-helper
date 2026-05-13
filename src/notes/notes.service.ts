@@ -17,9 +17,9 @@ export class NotesService {
         admin: {
           select: {
             name: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
   }
 
@@ -32,9 +32,9 @@ export class NotesService {
         admin: {
           select: {
             name: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
   }
 
@@ -45,9 +45,9 @@ export class NotesService {
         admin: {
           select: {
             name: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
     if (!note) {
       throw new NotFoundException('Anotação não encontrada');
@@ -67,9 +67,9 @@ export class NotesService {
         admin: {
           select: {
             name: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
   }
 

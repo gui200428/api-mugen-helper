@@ -19,7 +19,7 @@ import { AdminJwtStrategy } from './admin-jwt.strategy';
         if (!secret || secret.length < 32) {
           throw new Error(
             'JWT_SECRET must be defined and at least 32 characters long. ' +
-            'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"',
+              "Generate one with: node -e \"console.log(require('crypto').randomBytes(64).toString('hex'))\"",
           );
         }
 

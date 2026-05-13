@@ -16,7 +16,15 @@ const DEMO_EXPIRY_DAYS = 7;
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'demos');
 
 // Common framework build output directories that should be flattened to root
-const FRAMEWORK_BUILD_DIRS = ['dist', 'build', 'out', '.next', 'public', 'www', 'output'];
+const FRAMEWORK_BUILD_DIRS = [
+  'dist',
+  'build',
+  'out',
+  '.next',
+  'public',
+  'www',
+  'output',
+];
 
 @Injectable()
 export class DemosService {
@@ -43,7 +51,9 @@ export class DemosService {
     });
 
     if (existingDemo) {
-      throw new ConflictException(`Demo with slug "${dto.slug}" already exists`);
+      throw new ConflictException(
+        `Demo with slug "${dto.slug}" already exists`,
+      );
     }
 
     if (!file) {
@@ -94,7 +104,7 @@ export class DemosService {
         this.cleanupDemoFiles(demoDir);
         throw new BadRequestException(
           'After extraction, index.html was not found at the root level. ' +
-          'Make sure to zip the contents of your build output (dist/, build/, out/) directly.',
+            'Make sure to zip the contents of your build output (dist/, build/, out/) directly.',
         );
       }
     } catch (error) {
@@ -103,7 +113,9 @@ export class DemosService {
       }
       this.cleanupDemoFiles(demoDir);
       this.logger.error(`Failed to extract ZIP: ${error.message}`);
-      throw new BadRequestException('Failed to extract ZIP file. The file may be corrupted.');
+      throw new BadRequestException(
+        'Failed to extract ZIP file. The file may be corrupted.',
+      );
     }
 
     const expiresAt = new Date();
@@ -140,14 +152,21 @@ export class DemosService {
 
       if (fs.statSync(singleItemPath).isDirectory()) {
         // Check if it's a known build output dir or contains index.html
-        const isFrameworkDir = FRAMEWORK_BUILD_DIRS.includes(singleItem.toLowerCase());
-        const hasIndexInside = fs.existsSync(path.join(singleItemPath, 'index.html'));
+        const isFrameworkDir = FRAMEWORK_BUILD_DIRS.includes(
+          singleItem.toLowerCase(),
+        );
+        const hasIndexInside = fs.existsSync(
+          path.join(singleItemPath, 'index.html'),
+        );
 
         if (isFrameworkDir || hasIndexInside) {
           this.logger.log(`Flattening build directory: ${singleItem}/ → root`);
           const subContents = fs.readdirSync(singleItemPath);
           for (const item of subContents) {
-            fs.renameSync(path.join(singleItemPath, item), path.join(demoDir, item));
+            fs.renameSync(
+              path.join(singleItemPath, item),
+              path.join(demoDir, item),
+            );
           }
           fs.rmdirSync(singleItemPath);
         }
@@ -163,9 +182,16 @@ export class DemosService {
         if (fs.statSync(singlePath).isDirectory()) {
           const subContents = fs.readdirSync(singlePath);
           for (const item of subContents) {
-            fs.renameSync(path.join(singlePath, item), path.join(demoDir, item));
+            fs.renameSync(
+              path.join(singlePath, item),
+              path.join(demoDir, item),
+            );
           }
-          try { fs.rmdirSync(singlePath); } catch { /* may not be empty */ }
+          try {
+            fs.rmdirSync(singlePath);
+          } catch {
+            /* may not be empty */
+          }
         }
       }
     }
@@ -212,7 +238,9 @@ export class DemosService {
       where: { id },
       data,
     });
-    this.logger.log(`Demo status updated: ${updated.slug} is now ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+    this.logger.log(
+      `Demo status updated: ${updated.slug} is now ${isActive ? 'ACTIVE' : 'INACTIVE'}`,
+    );
     return updated;
   }
 
@@ -240,7 +268,10 @@ export class DemosService {
     const baseTag = `<base href="/demos/serve/${slug}/">`;
 
     // Case-insensitive replacement for <head>
-    html = html.replace(/<head(\s[^>]*)?>/i, (match) => `${match}\n  ${baseTag}`);
+    html = html.replace(
+      /<head(\s[^>]*)?>/i,
+      (match) => `${match}\n  ${baseTag}`,
+    );
 
     // Fallback if no <head> tag exists
     if (!html.includes(baseTag)) {
@@ -249,7 +280,6 @@ export class DemosService {
 
     return { html };
   }
-
 
   async remove(id: string) {
     const demo = await this.prisma.demoPage.findUnique({ where: { id } });
@@ -289,7 +319,9 @@ export class DemosService {
   }
 
   private async expireDemo(demoId: string) {
-    const demo = await this.prisma.demoPage.findUnique({ where: { id: demoId } });
+    const demo = await this.prisma.demoPage.findUnique({
+      where: { id: demoId },
+    });
 
     if (!demo) return;
 
@@ -309,7 +341,9 @@ export class DemosService {
         this.logger.log(`Cleaned up demo files: ${dirPath}`);
       }
     } catch (error) {
-      this.logger.error(`Failed to clean up demo files at ${dirPath}: ${error.message}`);
+      this.logger.error(
+        `Failed to clean up demo files at ${dirPath}: ${error.message}`,
+      );
     }
   }
 }

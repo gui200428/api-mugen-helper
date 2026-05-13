@@ -99,7 +99,11 @@ export class AdminAuthService {
     }
 
     // H1: Generate short-lived access token + long-lived refresh token
-    const accessToken = this.generateAccessToken(admin.id, admin.email, admin.name);
+    const accessToken = this.generateAccessToken(
+      admin.id,
+      admin.email,
+      admin.name,
+    );
     const refreshToken = await this.generateRefreshToken(admin.id);
 
     this.logger.log(`Successful login: ${admin.email}`);
@@ -168,7 +172,9 @@ export class AdminAuthService {
       .catch(() => null);
 
     if (deleted) {
-      this.logger.log(`Logout: refresh token revoked for admin ${deleted.adminId}`);
+      this.logger.log(
+        `Logout: refresh token revoked for admin ${deleted.adminId}`,
+      );
     }
 
     return { message: 'Logged out successfully' };
@@ -189,7 +195,11 @@ export class AdminAuthService {
 
   // --- Private helpers ---
 
-  private generateAccessToken(adminId: string, email: string, name: string): string {
+  private generateAccessToken(
+    adminId: string,
+    email: string,
+    name: string,
+  ): string {
     const payload = {
       email,
       name,

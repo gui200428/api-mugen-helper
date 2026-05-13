@@ -37,10 +37,7 @@ export class NotesController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateNoteDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateNoteDto) {
     return this.notesService.update(id, dto);
   }
 

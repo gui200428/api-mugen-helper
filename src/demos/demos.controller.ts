@@ -20,7 +20,7 @@ import { AdminGuard } from '../admin-auth/guards/admin.guard';
 
 @Controller('demos')
 export class DemosController {
-  constructor(private readonly demosService: DemosService) { }
+  constructor(private readonly demosService: DemosService) {}
 
   // Admin: upload a new demo (500MB max to support full framework builds)
   @Post()
@@ -85,12 +85,12 @@ export class DemosController {
           "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:",
           "script-src * 'unsafe-inline' 'unsafe-eval' data: blob:",
           "style-src * 'unsafe-inline'",
-          "img-src * data: blob:",
-          "font-src * data:",
-          "connect-src *",
-          "frame-src *",
-          "worker-src * blob:",
-          "manifest-src *",
+          'img-src * data: blob:',
+          'font-src * data:',
+          'connect-src *',
+          'frame-src *',
+          'worker-src * blob:',
+          'manifest-src *',
         ].join('; '),
       );
       res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
@@ -110,7 +110,9 @@ export class DemosController {
           const urlObj = new URL(website);
           return res.redirect(`${urlObj.protocol}//${urlObj.host}`);
         }
-      } catch (e) { /* demo doesn't exist */ }
+      } catch (e) {
+        /* demo doesn't exist */
+      }
 
       const frontendUrl = process.env.CORS_ORIGIN
         ? process.env.CORS_ORIGIN.split(',')[0].trim()

@@ -13,7 +13,15 @@ import * as fs from 'fs';
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'pages');
 
-const FRAMEWORK_BUILD_DIRS = ['dist', 'build', 'out', '.next', 'public', 'www', 'output'];
+const FRAMEWORK_BUILD_DIRS = [
+  'dist',
+  'build',
+  'out',
+  '.next',
+  'public',
+  'www',
+  'output',
+];
 
 @Injectable()
 export class PortfolioService {
@@ -32,7 +40,9 @@ export class PortfolioService {
     });
 
     if (existing) {
-      throw new ConflictException(`Portfolio page with slug "${dto.slug}" already exists`);
+      throw new ConflictException(
+        `Portfolio page with slug "${dto.slug}" already exists`,
+      );
     }
 
     if (!file) {
@@ -97,7 +107,9 @@ export class PortfolioService {
       },
     });
 
-    this.logger.log(`Portfolio page created: ${dto.slug} (title: ${dto.title})`);
+    this.logger.log(
+      `Portfolio page created: ${dto.slug} (title: ${dto.title})`,
+    );
     return page;
   }
 
@@ -130,7 +142,9 @@ export class PortfolioService {
       data: { isActive },
     });
 
-    this.logger.log(`Portfolio page status updated: ${updated.slug} → ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+    this.logger.log(
+      `Portfolio page status updated: ${updated.slug} → ${isActive ? 'ACTIVE' : 'INACTIVE'}`,
+    );
     return updated;
   }
 
@@ -149,7 +163,9 @@ export class PortfolioService {
   }
 
   async serve(slug: string): Promise<{ html: string }> {
-    const page = await this.prisma.portfolioPage.findUnique({ where: { slug } });
+    const page = await this.prisma.portfolioPage.findUnique({
+      where: { slug },
+    });
 
     if (!page || !page.isActive) {
       throw new NotFoundException('Portfolio page not found or is inactive');
@@ -165,7 +181,10 @@ export class PortfolioService {
 
     // Inject <base> tag (case-insensitive match for <head> / <Head> / <HEAD>)
     const baseTag = `<base href="/portfolio/serve/${slug}/">`;
-    html = html.replace(/<head(\s[^>]*)?>/i, (match) => `${match}\n  ${baseTag}`);
+    html = html.replace(
+      /<head(\s[^>]*)?>/i,
+      (match) => `${match}\n  ${baseTag}`,
+    );
     if (!html.includes(baseTag)) {
       html = `${baseTag}\n${html}`;
     }
@@ -179,7 +198,9 @@ export class PortfolioService {
     if (items.length === 1) {
       const singlePath = path.join(dir, items[0]);
       if (fs.statSync(singlePath).isDirectory()) {
-        const isFramework = FRAMEWORK_BUILD_DIRS.includes(items[0].toLowerCase());
+        const isFramework = FRAMEWORK_BUILD_DIRS.includes(
+          items[0].toLowerCase(),
+        );
         const hasIndex = fs.existsSync(path.join(singlePath, 'index.html'));
 
         if (isFramework || hasIndex) {
@@ -203,7 +224,11 @@ export class PortfolioService {
           for (const f of sub) {
             fs.renameSync(path.join(p, f), path.join(dir, f));
           }
-          try { fs.rmdirSync(p); } catch { /* ignore */ }
+          try {
+            fs.rmdirSync(p);
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
@@ -216,7 +241,9 @@ export class PortfolioService {
         this.logger.log(`Cleaned up portfolio files: ${dirPath}`);
       }
     } catch (error) {
-      this.logger.error(`Failed to clean up portfolio files at ${dirPath}: ${error.message}`);
+      this.logger.error(
+        `Failed to clean up portfolio files at ${dirPath}: ${error.message}`,
+      );
     }
   }
 }

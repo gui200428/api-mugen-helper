@@ -16,7 +16,10 @@ export class ClientsService {
         ...dto,
         adminId,
       },
-      include: { demoPages: true, admin: { select: { id: true, name: true, email: true } } },
+      include: {
+        demoPages: true,
+        admin: { select: { id: true, name: true, email: true } },
+      },
     });
 
     this.logger.log(`Client created: ${client.name} (${client.id})`);
@@ -55,7 +58,9 @@ export class ClientsService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          demoPages: { select: { id: true, slug: true, isActive: true, expiresAt: true } },
+          demoPages: {
+            select: { id: true, slug: true, isActive: true, expiresAt: true },
+          },
           admin: { select: { id: true, name: true, email: true } },
         },
       }),
@@ -104,7 +109,7 @@ export class ClientsService {
           // Extend expiration slightly to avoid instant expiration upon restore
           const newExpiry = new Date();
           newExpiry.setDate(newExpiry.getDate() + 7);
-          
+
           await this.prisma.demoPage.update({
             where: { id: latestDemo.id },
             data: { isActive: true, expiresAt: newExpiry },
@@ -123,7 +128,9 @@ export class ClientsService {
       where: { id },
       data: dto,
       include: {
-        demoPages: { select: { id: true, slug: true, isActive: true, expiresAt: true } },
+        demoPages: {
+          select: { id: true, slug: true, isActive: true, expiresAt: true },
+        },
         admin: { select: { id: true, name: true, email: true } },
       },
     });

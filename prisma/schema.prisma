@@ -60,6 +60,7 @@ model Client {
   country       String?      // País
   language      String?      // Idioma
   notes         String?      // Notas internas
+  thumbnailUrl  String?      // URL of the thumbnail image
   status        ClientStatus @default(PENDING)
 
   // Admin responsável
@@ -81,6 +82,7 @@ model DemoPage {
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   filePath      String             // Caminho no filesystem para os arquivos
+  thumbnailUrl  String?            // URL of the thumbnail image
   isActive      Boolean  @default(true)
   expiresAt     DateTime           // Data de expiração (createdAt + 7 dias)
 
@@ -101,6 +103,7 @@ model PortfolioPage {
   slug        String   @unique   // URL slug (ex: "site-restaurante")
   title       String             // Título descritivo da página
   filePath    String             // Caminho no filesystem
+  thumbnailUrl String?           // URL of the thumbnail image
   isActive    Boolean  @default(true)
 
   createdAt   DateTime @default(now())
