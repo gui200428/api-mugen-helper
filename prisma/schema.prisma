@@ -59,6 +59,7 @@ model Client {
   website       String       // Site atual do cliente
   country       String?      // País
   language      String?      // Idioma
+  negotiator    String?      // Negociador
   notes         String?      // Notas internas
   thumbnailUrl  String?      // URL of the thumbnail image
   status        ClientStatus @default(PENDING)
