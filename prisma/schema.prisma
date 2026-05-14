@@ -87,6 +87,8 @@ model DemoPage {
   isActive      Boolean  @default(true)
   expiresAt     DateTime           // Data de expiração (createdAt + 7 dias)
 
+  accessCount   Int      @default(0) // Contador de acessos
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
