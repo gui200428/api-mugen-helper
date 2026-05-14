@@ -90,7 +90,7 @@ export class FoldersService {
     return folder;
   }
 
-  async update(id: string, dto: UpdateFolderDto) {
+  async update(id: string, dto: UpdateFolderDto & { moveToRoot?: boolean }) {
     const folder = await this.prisma.folder.findUnique({ where: { id } });
     if (!folder) throw new NotFoundException('Pasta não encontrada');
 
@@ -106,9 +106,16 @@ export class FoldersService {
         throw new BadRequestException('Pasta pai não encontrada');
     }
 
+    // Handle explicit move to root (set parentId to null)
+    const data: any = { ...dto };
+    if (dto.moveToRoot) {
+      data.parentId = null;
+      delete data.moveToRoot;
+    }
+
     return this.prisma.folder.update({
       where: { id },
-      data: dto,
+      data,
     });
   }
 

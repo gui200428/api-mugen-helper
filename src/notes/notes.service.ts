@@ -55,14 +55,21 @@ export class NotesService {
     return note;
   }
 
-  async update(id: string, dto: UpdateNoteDto) {
+  async update(id: string, dto: UpdateNoteDto & { moveToRoot?: boolean }) {
     const note = await this.prisma.note.findUnique({ where: { id } });
     if (!note) {
       throw new NotFoundException('Anotação não encontrada');
     }
+
+    const data: any = { ...dto };
+    if (dto.moveToRoot) {
+      data.folderId = null;
+      delete data.moveToRoot;
+    }
+
     return this.prisma.note.update({
       where: { id },
-      data: dto,
+      data,
       include: {
         admin: {
           select: {
